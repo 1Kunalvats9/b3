@@ -16,7 +16,7 @@ const ADMIN_TABS = ['Active Orders', 'Past Orders', 'Products', 'Analytics'];
 const AdminPanel = () => {
   const { products, isLoading: productsLoading, fetchProducts } = useProducts();
   const { orders, isLoading: ordersLoading, fetchAllOrders, updateOrderStatus } = useOrders();
-  const { joinAdminRoom, onNewOrder, offNewOrder } = useSocket();
+  const { joinAdminRoom, onNewOrder, offNewOrder, isConnected, reconnect } = useSocket();
   const [activeTab, setActiveTab] = useState('Active Orders');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -47,10 +47,22 @@ const AdminPanel = () => {
 
   useEffect(() => {
     // Join admin room for real-time updates
-    joinAdminRoom();
+    if (isConnected) {
+      joinAdminRoom();
+    } else {
+      console.log('Socket not connected, attempting to reconnect...');
+      reconnect();
+      // Try joining admin room after a short delay
+      setTimeout(() => {
+        if (isConnected) {
+          joinAdminRoom();
+        }
+      }, 2000);
+    }
 
     // Listen for new orders
     onNewOrder((data) => {
+      console.log('New order received:', data);
       showToast(`New order #${data.order._id.slice(-6).toUpperCase()} received!`, 'info');
       fetchAllOrders(); // Refresh orders
     });
@@ -58,7 +70,7 @@ const AdminPanel = () => {
     return () => {
       offNewOrder();
     };
-  }, []);
+  }, [isConnected]);
 
   // Fetch appropriate data based on active tab
   useEffect(() => {
@@ -245,7 +257,13 @@ const AdminPanel = () => {
           </View>
           <View>
             <Text className="text-xl font-bold text-gray-800">Admin Panel</Text>
-            <Text className="text-sm text-gray-500">Manage your store</Text>
+            <View className="flex-row items-center">
+              <Text className="text-sm text-gray-500">Manage your store</Text>
+              <View className={`w-2 h-2 rounded-full ml-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+              <Text className={`text-xs ml-1 ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
+                {isConnected ? 'Live' : 'Offline'}
+              </Text>
+            </View>
           </View>
         </View>
         <View className="bg-blue-50 px-3 py-2 rounded-full">

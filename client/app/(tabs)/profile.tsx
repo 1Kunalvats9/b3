@@ -18,7 +18,7 @@ const Profile = () => {
   const { user: clerkUser } = useClerkUser();
   const { userData, fetchUserData } = useUser();
   const { orders, isLoading: ordersLoading, fetchOrders } = useOrders();
-  const { onOrderStatusUpdate, offOrderStatusUpdate } = useSocket();
+  const { onOrderStatusUpdate, offOrderStatusUpdate, isConnected } = useSocket();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'orders'>('profile');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -43,18 +43,21 @@ const Profile = () => {
       fetchOrders();
     }
 
-    // Listen for order status updates
-    onOrderStatusUpdate((data) => {
-      showToast(data.message, 'info');
-      if (activeTab === 'orders') {
-        fetchOrders(); // Refresh orders
-      }
-    });
+    // Listen for order status updates only if connected
+    if (isConnected) {
+      onOrderStatusUpdate((data) => {
+        console.log('Order status update received:', data);
+        showToast(data.message, 'info');
+        if (activeTab === 'orders') {
+          fetchOrders(); // Refresh orders
+        }
+      });
+    }
 
     return () => {
       offOrderStatusUpdate();
     };
-  }, [activeTab]);
+  }, [activeTab, isConnected]);
 
   const showAlert = (title: string, message: string, buttons: Array<{text: string; onPress: () => void; style?: 'default' | 'cancel' | 'destructive'}>) => {
     setAlertConfig({
