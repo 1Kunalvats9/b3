@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Alert, Image, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Image, TextInput, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useCart, CartItem } from '@/hooks/useCart';
@@ -7,8 +7,11 @@ import { useProducts, Product } from '@/hooks/useProducts';
 import { useOrders } from '@/hooks/useOrders';
 import { useUser } from '@/hooks/useUser';
 import Header from '@/components/Header';
-import initiateUpiPayment from "../../utils/upiPayment.js"; // Ensure this utility is robust
+import initiateUpiPayment from "../../utils/upiPayment.js";
 import SuccessModal from '@/components/SuccessModal';
+import CustomAlert from '@/components/CustomAlert';
+import CustomToast from '@/components/CustomToast';
+//@ts-ignore
 import { smsTemplates } from '../../utils/sms.js';
 
 const Cart = () => {
@@ -29,8 +32,23 @@ const Cart = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
   const [coinsEarned, setCoinsEarned] = useState(0);
-  const [isPlacingOrder, setIsPlacingOrder] = useState(false); // For overall order placement
-  const [isCartLoading, setIsCartLoading] = useState(false); // For initial cart loading
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [isCartLoading, setIsCartLoading] = useState(false);
+
+  // Custom alert states
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    buttons: [] as Array<{text: string; onPress: () => void; style?: 'default' | 'cancel' | 'destructive'}>
+  });
+
+  // Toast states
+  const [toastConfig, setToastConfig] = useState({
+    visible: false,
+    message: '',
+    type: 'info' as 'success' | 'error' | 'info' | 'warning'
+  });
 
   useEffect(() => {
     loadCartItems();
@@ -51,6 +69,23 @@ const Cart = () => {
     }
   }, [cartItems, products]);
 
+  const showAlert = (title: string, message: string, buttons: Array<{text: string; onPress: () => void; style?: 'default' | 'cancel' | 'destructive'}>) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      buttons
+    });
+  };
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+    setToastConfig({
+      visible: true,
+      message,
+      type
+    });
+  };
+
   const loadCartItems = async () => {
     setIsCartLoading(true);
     try {
@@ -58,18 +93,19 @@ const Cart = () => {
       setCartItems(items);
     } catch (error) {
       console.error('Error loading cart items:', error);
-      Alert.alert('Error', 'Failed to load cart items.');
+      showToast('Failed to load cart items', 'error');
     } finally {
       setIsCartLoading(false);
     }
   };
 
   const handleRemoveItem = async (barcode: string) => {
-    Alert.alert(
+    const product = cartProducts.find(p => p.barcode === barcode);
+    showAlert(
       'Remove Item',
-      'Are you sure you want to remove this item from your cart?',
+      `Are you sure you want to remove "${product?.name}" from your cart?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel', onPress: () => {} },
         {
           text: 'Remove',
           style: 'destructive',
@@ -77,8 +113,9 @@ const Cart = () => {
             try {
               await removeFromCart(barcode);
               await loadCartItems();
+              showToast('Item removed from cart', 'success');
             } catch (error) {
-              Alert.alert('Error', 'Failed to remove item from cart');
+              showToast('Failed to remove item from cart', 'error');
             }
           },
         },
@@ -96,16 +133,16 @@ const Cart = () => {
       await updateCartItemQuantity(barcode, newQuantity);
       await loadCartItems();
     } catch (error) {
-      Alert.alert('Error', 'Failed to update item quantity');
+      showToast('Failed to update item quantity', 'error');
     }
   };
 
   const handleClearCart = async () => {
-    Alert.alert(
+    showAlert(
       'Clear Cart',
       'Are you sure you want to remove all items from your cart?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel', onPress: () => {} },
         {
           text: 'Clear All',
           style: 'destructive',
@@ -113,8 +150,9 @@ const Cart = () => {
             try {
               await clearCart();
               await loadCartItems();
+              showToast('Cart cleared successfully', 'success');
             } catch (error) {
-              Alert.alert('Error', 'Failed to clear cart');
+              showToast('Failed to clear cart', 'error');
             }
           },
         },
@@ -134,15 +172,15 @@ const Cart = () => {
   const handleCheckout = async () => {
     // Input validation
     if (cartProducts.length === 0) {
-      Alert.alert('Error', 'Your cart is empty. Please add items to place an order.');
+      showToast('Your cart is empty. Please add items to place an order.', 'warning');
       return;
     }
     if (!phoneNumber.trim()) {
-      Alert.alert('Error', 'Please enter your phone number.');
+      showToast('Please enter your phone number.', 'warning');
       return;
     }
     if (deliveryOption === 'delivery' && !address.trim()) {
-      Alert.alert('Error', 'Please enter your delivery address.');
+      showToast('Please enter your delivery address.', 'warning');
       return;
     }
 
@@ -164,42 +202,30 @@ const Cart = () => {
       phoneNumber,
     };
 
-    setIsPlacingOrder(true); // Start loading state for the order placement
+    setIsPlacingOrder(true);
 
     try {
       if (paymentOption === 'online') {
-        initiateUpiPayment(orderTotal, "Your Order Payment");
-        setIsPlacingOrder(false);
-        return; 
+        const paymentSuccess = await initiateUpiPayment(orderTotal, "Your Order Payment");
+        if (!paymentSuccess) {
+          setIsPlacingOrder(false);
+          return;
+        }
       }
 
       const response = await createOrder(orderData);
       console.log('Order response:', response);
-      const sendSms= async()=>{
-        const message = `${smsTemplates.orderPlaced}\n ${orderData}`
-        const res = await fetch('https://b3-iota.vercel.app/api/sendSms',{
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            phoneNumber:phoneNumber,
-            mssg:message
-          }),
-        })
-      }
-      sendSms();
 
       // Clear cart after successful order creation
       await clearCart();
-      await loadCartItems(); // Reload empty cart
+      await loadCartItems();
 
       // Refresh user data to get updated coins
       await fetchUserData();
 
       // Show success modal with order number and coins earned
       const orderNum = response._id ? response._id.slice(-6).toUpperCase() : 'UNKNOWN';
-      const earned = response.coinsEarned || calculateCoinsToEarn(); // Use coins from response if available
+      const earned = response.coinsEarned || calculateCoinsToEarn();
 
       setOrderNumber(orderNum);
       setCoinsEarned(earned);
@@ -211,21 +237,24 @@ const Cart = () => {
       setDeliveryOption('delivery');
       setPaymentOption('online');
 
+      showToast('Order placed successfully!', 'success');
+
     } catch (error) {
       console.error('Order placement error:', error);
-      Alert.alert(
+      showAlert(
         'Order Failed',
-        error instanceof Error ? error.message : 'Something went wrong. Please try again.'
+        error instanceof Error ? error.message : 'Something went wrong. Please try again.',
+        [{ text: 'OK', onPress: () => {} }]
       );
     } finally {
-      setIsPlacingOrder(false); // End loading state
+      setIsPlacingOrder(false);
     }
   };
 
   const renderCartItem = ({ item }: { item: Product & { cartQuantity: number } }) => (
-    <View className="bg-white rounded-xl shadow-sm border border-gray-100 mx-4 mb-3 p-4">
+    <View className="bg-white rounded-2xl shadow-sm border border-gray-100 mx-4 mb-4 p-4">
       <View className="flex-row">
-        <View className="w-16 h-16 bg-gray-100 rounded-lg mr-3 overflow-hidden">
+        <View className="w-20 h-20 bg-gray-100 rounded-xl mr-4 overflow-hidden">
           {item.image ? (
             <Image
               source={{ uri: item.image }}
@@ -234,50 +263,50 @@ const Cart = () => {
             />
           ) : (
             <View className="w-full h-full items-center justify-center">
-              <Feather name="image" size={20} color="#9CA3AF" />
+              <Feather name="image" size={24} color="#9CA3AF" />
             </View>
           )}
         </View>
 
         <View className="flex-1">
-          <Text className="text-base font-semibold text-gray-800 mb-1" numberOfLines={2}>
+          <Text className="text-lg font-bold text-gray-800 mb-1" numberOfLines={2}>
             {item.name}
           </Text>
-          <Text className="text-sm text-gray-500 mb-1 capitalize">
+          <Text className="text-sm text-gray-500 mb-2 capitalize">
             {item.category}
           </Text>
-          <Text className="text-lg font-bold text-purple-600">
+          <Text className="text-xl font-bold text-purple-600">
             ₹{item.price.toFixed(2)}
           </Text>
         </View>
 
         <TouchableOpacity
           onPress={() => handleRemoveItem(item.barcode)}
-          className="p-2"
+          className="p-3 bg-red-50 rounded-xl"
         >
-          <Feather name="trash-2" size={18} color="#EF4444" />
+          <Feather name="trash-2" size={20} color="#EF4444" />
         </TouchableOpacity>
       </View>
 
-      <View className="flex-row items-center justify-between mt-3">
-        <View className="flex-row items-center">
+      <View className="flex-row items-center justify-between mt-4 pt-4 border-t border-gray-100">
+        <View className="flex-row items-center bg-gray-50 rounded-xl p-1">
           <TouchableOpacity
             onPress={() => handleUpdateQuantity(item.barcode, item.cartQuantity - 1)}
-            className="w-8 h-8 bg-gray-200 rounded-full items-center justify-center"
+            className="w-10 h-10 bg-white rounded-lg items-center justify-center shadow-sm"
           >
-            <Feather name="minus" size={14} color="#374151" />
+            <Feather name="minus" size={16} color="#374151" />
           </TouchableOpacity>
-          <Text className="mx-4 text-base font-semibold">
+          <Text className="mx-6 text-lg font-bold text-gray-800">
             {item.cartQuantity}
           </Text>
           <TouchableOpacity
             onPress={() => handleUpdateQuantity(item.barcode, item.cartQuantity + 1)}
-            className="w-8 h-8 bg-gray-200 rounded-full items-center justify-center"
+            className="w-10 h-10 bg-white rounded-lg items-center justify-center shadow-sm"
           >
-            <Feather name="plus" size={14} color="#374151" />
+            <Feather name="plus" size={16} color="#374151" />
           </TouchableOpacity>
         </View>
-        <Text className="text-base font-bold text-gray-800">
+        <Text className="text-xl font-bold text-gray-800">
           ₹{(item.price * item.cartQuantity).toFixed(2)}
         </Text>
       </View>
@@ -296,16 +325,16 @@ const Cart = () => {
       ) : cartProducts.length > 0 ? (
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
           {/* Cart Items Header */}
-          <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-            <Text className="text-gray-600 font-medium">
+          <View className="flex-row items-center justify-between px-4 py-4 bg-white border-b border-gray-100">
+            <Text className="text-lg font-bold text-gray-800">
               {cartProducts.length} item{cartProducts.length !== 1 ? 's' : ''}
             </Text>
             <TouchableOpacity
               onPress={handleClearCart}
-              className="flex-row items-center px-3 py-2 bg-red-50 rounded-lg"
+              className="flex-row items-center px-4 py-2 bg-red-50 rounded-xl"
             >
-              <Feather name="trash-2" size={14} color="#EF4444" />
-              <Text className="ml-2 text-red-600 font-medium text-sm">Clear All</Text>
+              <Feather name="trash-2" size={16} color="#EF4444" />
+              <Text className="ml-2 text-red-600 font-semibold">Clear All</Text>
             </TouchableOpacity>
           </View>
 
@@ -314,50 +343,50 @@ const Cart = () => {
             data={cartProducts}
             renderItem={renderCartItem}
             keyExtractor={(item) => item._id}
-            contentContainerStyle={{ paddingTop: 12 }}
-            scrollEnabled={false} // Disable FlatList scrolling as it's inside a ScrollView
+            contentContainerStyle={{ paddingTop: 16 }}
+            scrollEnabled={false}
           />
 
           {/* Order Details Form */}
-          <View className="bg-white mx-4 mt-4 rounded-xl shadow-sm border border-gray-100 p-4">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Order Details</Text>
+          <View className="bg-white mx-4 mt-6 rounded-2xl shadow-sm border border-gray-100 p-6">
+            <Text className="text-xl font-bold text-gray-800 mb-6">Order Details</Text>
 
             {/* Phone Number */}
-            <View className="mb-4">
-              <Text className="text-sm font-medium text-gray-700 mb-2">Phone Number *</Text>
+            <View className="mb-6">
+              <Text className="text-base font-semibold text-gray-700 mb-3">Phone Number *</Text>
               <TextInput
                 value={phoneNumber}
                 onChangeText={setPhoneNumber}
                 placeholder="Enter your phone number"
                 keyboardType="phone-pad"
-                className="border border-gray-200 rounded-lg px-3 py-3 text-base"
+                className="border border-gray-200 rounded-xl px-4 py-4 text-base bg-gray-50"
               />
             </View>
 
             {/* Delivery Options */}
-            <View className="mb-4">
-              <Text className="text-sm font-medium text-gray-700 mb-3">Delivery Option</Text>
-              <View className="flex-row space-x-3">
+            <View className="mb-6">
+              <Text className="text-base font-semibold text-gray-700 mb-4">Delivery Option</Text>
+              <View className="flex-row space-x-4">
                 <TouchableOpacity
                   onPress={() => setDeliveryOption('delivery')}
-                  className={`flex-1 flex-row items-center justify-center py-3 px-4 rounded-lg border ${
+                  className={`flex-1 flex-row items-center justify-center py-4 px-4 rounded-xl border-2 ${
                     deliveryOption === 'delivery' ? 'bg-purple-50 border-purple-500' : 'bg-gray-50 border-gray-200'
                   }`}
                 >
-                  <Feather name="truck" size={16} color={deliveryOption === 'delivery' ? '#8B5CF6' : '#6B7280'} />
-                  <Text className={`ml-2 font-medium ${deliveryOption === 'delivery' ? 'text-purple-600' : 'text-gray-600'}`}>
+                  <Feather name="truck" size={20} color={deliveryOption === 'delivery' ? '#8B5CF6' : '#6B7280'} />
+                  <Text className={`ml-3 font-semibold ${deliveryOption === 'delivery' ? 'text-purple-600' : 'text-gray-600'}`}>
                     Home Delivery
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => setDeliveryOption('takeaway')}
-                  className={`flex-1 flex-row items-center justify-center py-3 px-4 rounded-lg border ${
+                  className={`flex-1 flex-row items-center justify-center py-4 px-4 rounded-xl border-2 ${
                     deliveryOption === 'takeaway' ? 'bg-purple-50 border-purple-500' : 'bg-gray-50 border-gray-200'
                   }`}
                 >
-                  <Feather name="shopping-bag" size={16} color={deliveryOption === 'takeaway' ? '#8B5CF6' : '#6B7280'} />
-                  <Text className={`ml-2 font-medium ${deliveryOption === 'takeaway' ? 'text-purple-600' : 'text-gray-600'}`}>
+                  <Feather name="shopping-bag" size={20} color={deliveryOption === 'takeaway' ? '#8B5CF6' : '#6B7280'} />
+                  <Text className={`ml-3 font-semibold ${deliveryOption === 'takeaway' ? 'text-purple-600' : 'text-gray-600'}`}>
                     Takeaway
                   </Text>
                 </TouchableOpacity>
@@ -366,44 +395,44 @@ const Cart = () => {
 
             {/* Address (only for delivery) */}
             {deliveryOption === 'delivery' && (
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-gray-700 mb-2">Delivery Address *</Text>
+              <View className="mb-6">
+                <Text className="text-base font-semibold text-gray-700 mb-3">Delivery Address *</Text>
                 <TextInput
                   value={address}
                   onChangeText={setAddress}
                   placeholder="Enter your complete address"
                   multiline
-                  numberOfLines={3}
-                  className="border border-gray-200 rounded-lg px-3 py-3 text-base"
+                  numberOfLines={4}
+                  className="border border-gray-200 rounded-xl px-4 py-4 text-base bg-gray-50"
                   textAlignVertical="top"
                 />
               </View>
             )}
 
             {/* Payment Options */}
-            <View className="mb-4">
-              <Text className="text-sm font-medium text-gray-700 mb-3">Payment Method</Text>
-              <View className="flex-row space-x-3">
+            <View className="mb-6">
+              <Text className="text-base font-semibold text-gray-700 mb-4">Payment Method</Text>
+              <View className="flex-row space-x-4">
                 <TouchableOpacity
                   onPress={() => setPaymentOption('online')}
-                  className={`flex-1 flex-row items-center justify-center py-3 px-4 rounded-lg border ${
+                  className={`flex-1 flex-row items-center justify-center py-4 px-4 rounded-xl border-2 ${
                     paymentOption === 'online' ? 'bg-green-50 border-green-500' : 'bg-gray-50 border-gray-200'
                   }`}
                 >
-                  <Feather name="credit-card" size={16} color={paymentOption === 'online' ? '#10B981' : '#6B7280'} />
-                  <Text className={`ml-2 font-medium ${paymentOption === 'online' ? 'text-green-600' : 'text-gray-600'}`}>
+                  <Feather name="credit-card" size={20} color={paymentOption === 'online' ? '#10B981' : '#6B7280'} />
+                  <Text className={`ml-3 font-semibold ${paymentOption === 'online' ? 'text-green-600' : 'text-gray-600'}`}>
                     Online Payment
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => setPaymentOption('cod')}
-                  className={`flex-1 flex-row items-center justify-center py-3 px-4 rounded-lg border ${
+                  className={`flex-1 flex-row items-center justify-center py-4 px-4 rounded-xl border-2 ${
                     paymentOption === 'cod' ? 'bg-green-50 border-green-500' : 'bg-gray-50 border-gray-200'
                   }`}
                 >
-                  <Feather name="dollar-sign" size={16} color={paymentOption === 'cod' ? '#10B981' : '#6B7280'} />
-                  <Text className={`ml-2 font-medium ${paymentOption === 'cod' ? 'text-green-600' : 'text-gray-600'}`}>
+                  <Feather name="dollar-sign" size={20} color={paymentOption === 'cod' ? '#10B981' : '#6B7280'} />
+                  <Text className={`ml-3 font-semibold ${paymentOption === 'cod' ? 'text-green-600' : 'text-gray-600'}`}>
                     Cash on {deliveryOption === 'delivery' ? 'Delivery' : 'Pickup'}
                   </Text>
                 </TouchableOpacity>
@@ -412,33 +441,33 @@ const Cart = () => {
           </View>
 
           {/* Order Summary */}
-          <View className="bg-white mx-4 mt-4 mb-6 rounded-xl shadow-sm border border-gray-100 p-4">
-            <Text className="text-lg font-bold text-gray-800 mb-3">Order Summary</Text>
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-gray-600">Subtotal</Text>
-              <Text className="font-semibold">₹{calculateTotal().toFixed(2)}</Text>
+          <View className="bg-white mx-4 mt-6 mb-8 rounded-2xl shadow-sm border border-gray-100 p-6">
+            <Text className="text-xl font-bold text-gray-800 mb-4">Order Summary</Text>
+            <View className="flex-row justify-between items-center mb-3">
+              <Text className="text-gray-600 text-base">Subtotal</Text>
+              <Text className="font-bold text-base">₹{calculateTotal().toFixed(2)}</Text>
             </View>
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-gray-600">Delivery Fee</Text>
-              <Text className="font-semibold">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-gray-600 text-base">Delivery Fee</Text>
+              <Text className="font-bold text-base">
                 {deliveryOption === 'delivery' ? '₹50.00' : '₹0.00'}
               </Text>
             </View>
-            <View className="border-t border-gray-200 pt-2 mt-2">
-              <View className="flex-row justify-between items-center mb-2">
-                <Text className="text-lg font-bold text-gray-800">Total</Text>
-                <Text className="text-xl font-bold text-purple-600">
+            <View className="border-t border-gray-200 pt-4 mt-4">
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-xl font-bold text-gray-800">Total</Text>
+                <Text className="text-2xl font-bold text-purple-600">
                   ₹{(calculateTotal() + (deliveryOption === 'delivery' ? 50 : 0)).toFixed(2)}
                 </Text>
               </View>
 
               {/* Coins to Earn */}
-              <View className="flex-row justify-between items-center mt-2 p-2 bg-yellow-50 rounded-lg">
+              <View className="flex-row justify-between items-center p-4 bg-yellow-50 rounded-xl border border-yellow-200">
                 <View className="flex-row items-center">
-                  <Feather name="star" size={16} color="#F59E0B" />
-                  <Text className="text-sm text-yellow-700 ml-1">You'll earn</Text>
+                  <Feather name="star" size={20} color="#F59E0B" />
+                  <Text className="text-base text-yellow-700 ml-2 font-semibold">You'll earn</Text>
                 </View>
-                <Text className="text-sm font-bold text-yellow-700">
+                <Text className="text-base font-bold text-yellow-700">
                   {calculateCoinsToEarn()} coin{calculateCoinsToEarn() !== 1 ? 's' : ''}
                 </Text>
               </View>
@@ -446,16 +475,21 @@ const Cart = () => {
           </View>
 
           {/* Checkout Button */}
-          <View className="px-4 pb-6">
+          <View className="px-4 pb-8">
             <TouchableOpacity
-              onPress={handleCheckout} // Corrected: Call handleCheckout for full cart checkout
+              onPress={handleCheckout}
               disabled={isPlacingOrder}
-              className={`rounded-xl py-4 items-center shadow-sm ${
+              className={`rounded-2xl py-5 items-center shadow-lg ${
                 isPlacingOrder ? 'bg-gray-400' : 'bg-purple-500'
               }`}
             >
               {isPlacingOrder ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <View className="flex-row items-center">
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text className="text-white text-lg font-bold ml-3">
+                    Placing Order...
+                  </Text>
+                </View>
               ) : (
                 <Text className="text-white text-lg font-bold">
                   Place Order - ₹{(calculateTotal() + (deliveryOption === 'delivery' ? 50 : 0)).toFixed(2)}
@@ -465,13 +499,15 @@ const Cart = () => {
           </View>
         </ScrollView>
       ) : (
-        <View className="flex-1 items-center justify-center">
-          <Feather name="shopping-cart" size={64} color="#9CA3AF" />
-          <Text className="text-xl font-semibold text-gray-500 mt-4">
+        <View className="flex-1 items-center justify-center px-8">
+          <View className="w-32 h-32 bg-gray-100 rounded-full items-center justify-center mb-6">
+            <Feather name="shopping-cart" size={48} color="#9CA3AF" />
+          </View>
+          <Text className="text-2xl font-bold text-gray-800 mb-3 text-center">
             Your cart is empty
           </Text>
-          <Text className="text-gray-400 mt-2 text-center px-8">
-            Add some products to get started with your order
+          <Text className="text-gray-500 text-center text-base leading-6">
+            Add some delicious items to get started with your order
           </Text>
         </View>
       )}
@@ -482,6 +518,23 @@ const Cart = () => {
         onClose={() => setShowSuccessModal(false)}
         orderNumber={orderNumber}
         coinsEarned={coinsEarned}
+      />
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        buttons={alertConfig.buttons}
+        onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+      />
+
+      {/* Custom Toast */}
+      <CustomToast
+        visible={toastConfig.visible}
+        message={toastConfig.message}
+        type={toastConfig.type}
+        onHide={() => setToastConfig(prev => ({ ...prev, visible: false }))}
       />
     </SafeAreaView>
   );

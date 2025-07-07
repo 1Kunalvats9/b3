@@ -15,6 +15,7 @@ export const getAllOrders = asyncHandler(async (req, res) => {
 
 export const createOrder = asyncHandler(async (req, res) => {
   try {
+    console.log('entered creatingorder')
     const { userId } = getAuth(req);
     const { items, total, deliveryOption, paymentOption, address, phoneNumber } = req.body;
 
@@ -23,6 +24,7 @@ export const createOrder = asyncHandler(async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
+    console.log("user found")
 
     // Create new order
     const order = new Order({
@@ -39,6 +41,7 @@ export const createOrder = asyncHandler(async (req, res) => {
 
     const savedOrder = await order.save();
 
+
     // Calculate coins earned (1 coin per 100 rupees)
     const coinsEarned = Math.floor(total / 100);
     
@@ -52,11 +55,12 @@ export const createOrder = asyncHandler(async (req, res) => {
     );
 
     console.log(`User ${user.email} earned ${coinsEarned} coins for order ${savedOrder._id}`);
-
+    console.log('order created')
     res.status(201).json({
       ...savedOrder.toObject(),
       coinsEarned
     });
+
   } catch (error) {
     console.error("Error creating order:", error);
     res.status(500).json({ error: "Server error while creating order." });
