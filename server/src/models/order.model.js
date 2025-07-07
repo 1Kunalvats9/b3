@@ -6,7 +6,7 @@ const orderItemSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   quantity: { type: Number, required: true },
   category: { type: String, required: true },
-  image: { type: String }
+  image: { type: String, default: '' }
 });
 
 const orderSchema = new mongoose.Schema({
@@ -33,5 +33,9 @@ const orderSchema = new mongoose.Schema({
     default: 'pending'
   }
 }, { timestamps: true });
+
+// Add indexes for better performance
+orderSchema.index({ userId: 1, createdAt: -1 });
+orderSchema.index({ status: 1 });
 
 export default mongoose.model('Order', orderSchema);

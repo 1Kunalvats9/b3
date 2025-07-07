@@ -115,7 +115,7 @@ export const useOrders = () => {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Order creation error response:', errorData);
-        throw new Error(errorData.error || `Failed to create order (${response.status})`);
+        throw new Error(errorData.error || errorData.message || `Failed to create order (${response.status})`);
       }
 
       const data = await response.json();

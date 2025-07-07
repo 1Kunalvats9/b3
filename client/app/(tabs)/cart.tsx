@@ -202,31 +202,40 @@ const Cart = () => {
       phoneNumber,
     };
 
+    console.log('Preparing to place order with data:', orderData);
     setIsPlacingOrder(true);
 
     try {
       if (paymentOption === 'online') {
+        console.log('Initiating UPI payment...');
         const paymentSuccess = await initiateUpiPayment(orderTotal, "Your Order Payment");
         if (!paymentSuccess) {
+          console.log('Payment was not completed');
           setIsPlacingOrder(false);
           return;
         }
+        console.log('Payment completed successfully');
       }
 
+      console.log('Creating order...');
       const response = await createOrder(orderData);
       console.log('Order response:', response);
 
       // Clear cart after successful order creation
+      console.log('Clearing cart...');
       await clearCart();
       await loadCartItems();
 
       // Refresh user data to get updated coins
+      console.log('Refreshing user data...');
       await fetchUserData();
 
       // Show success modal with order number and coins earned
       const orderNum = response._id ? response._id.slice(-6).toUpperCase() : 'UNKNOWN';
       const earned = response.coinsEarned || calculateCoinsToEarn();
 
+      console.log('Order placed successfully:', orderNum, 'Coins earned:', earned);
+      
       setOrderNumber(orderNum);
       setCoinsEarned(earned);
       setShowSuccessModal(true);
@@ -241,6 +250,7 @@ const Cart = () => {
 
     } catch (error) {
       console.error('Order placement error:', error);
+      console.error('Error details:', error instanceof Error ? error.message : error);
       showAlert(
         'Order Failed',
         error instanceof Error ? error.message : 'Something went wrong. Please try again.',
