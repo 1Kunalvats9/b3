@@ -1,8 +1,8 @@
 import express from 'express';
 import { sendSMS } from '../controllers/message.controller.js';
 
-const router = express.Router()
+const router = express.Router();
 
-router.get("/", sendSMS);
+router.put("/", sendSMS);
 
-export default router
+export default router;

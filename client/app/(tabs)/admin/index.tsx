@@ -4,18 +4,37 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useProducts, Product } from '@/hooks/useProducts';
 import { useOrders, Order } from '@/hooks/useOrders';
+import { useSocket } from '@/hooks/useSocket';
 import ProductCard from '@/components/ProductCard';
 import OrderCard from '@/components/OrderCard';
 import EditProductModal from '@/components/EditProductModal';
+import CustomAlert from '@/components/CustomAlert';
+import CustomToast from '@/components/CustomToast';
 
 const ADMIN_TABS = ['Active Orders', 'Past Orders', 'Products', 'Analytics'];
 
 const AdminPanel = () => {
   const { products, isLoading: productsLoading, fetchProducts } = useProducts();
   const { orders, isLoading: ordersLoading, fetchAllOrders, updateOrderStatus } = useOrders();
+  const { joinAdminRoom, onNewOrder, offNewOrder } = useSocket();
   const [activeTab, setActiveTab] = useState('Active Orders');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // Custom alert states
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    buttons: [] as Array<{text: string; onPress: () => void; style?: 'default' | 'cancel' | 'destructive'}>
+  });
+
+  // Toast states
+  const [toastConfig, setToastConfig] = useState({
+    visible: false,
+    message: '',
+    type: 'info' as 'success' | 'error' | 'info' | 'warning'
+  });
 
   // Filter orders based on status
   const activeOrders = orders.filter(order => 
@@ -26,6 +45,21 @@ const AdminPanel = () => {
     ['delivered', 'cancelled'].includes(order.status)
   );
 
+  useEffect(() => {
+    // Join admin room for real-time updates
+    joinAdminRoom();
+
+    // Listen for new orders
+    onNewOrder((data) => {
+      showToast(`New order #${data.order._id.slice(-6).toUpperCase()} received!`, 'info');
+      fetchAllOrders(); // Refresh orders
+    });
+
+    return () => {
+      offNewOrder();
+    };
+  }, []);
+
   // Fetch appropriate data based on active tab
   useEffect(() => {
     if (activeTab === 'Active Orders' || activeTab === 'Past Orders') {
@@ -34,6 +68,23 @@ const AdminPanel = () => {
       fetchProducts();
     }
   }, [activeTab]);
+
+  const showAlert = (title: string, message: string, buttons: Array<{text: string; onPress: () => void; style?: 'default' | 'cancel' | 'destructive'}>) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      buttons
+    });
+  };
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+    setToastConfig({
+      visible: true,
+      message,
+      type
+    });
+  };
 
   const handleEditProduct = (product: Product) => {
     setSelectedProduct(product);
@@ -49,9 +100,9 @@ const AdminPanel = () => {
   const handleUpdateOrderStatus = async (orderId: string, status: Order['status']) => {
     try {
       await updateOrderStatus(orderId, status);
-      Alert.alert('Success', `Order status updated to ${status}`);
+      showToast(`Order status updated to ${status}`, 'success');
     } catch (error) {
-      Alert.alert('Error', 'Failed to update order status');
+      showToast('Failed to update order status', 'error');
     }
   };
 
@@ -98,9 +149,14 @@ const AdminPanel = () => {
             columnWrapperStyle={{ justifyContent: 'space-around' }}
             ListEmptyComponent={
               <View className="flex-1 items-center justify-center py-20">
-                <Feather name="package" size={48} color="#9CA3AF" />
-                <Text className="text-lg font-semibold text-gray-500 mt-4">
+                <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-4">
+                  <Feather name="package" size={32} color="#9CA3AF" />
+                </View>
+                <Text className="text-xl font-bold text-gray-800 mb-2">
                   {productsLoading ? 'Loading products...' : 'No products found'}
+                </Text>
+                <Text className="text-gray-500 text-center">
+                  Products will appear here once added to inventory
                 </Text>
               </View>
             }
@@ -120,11 +176,13 @@ const AdminPanel = () => {
             }}
             ListEmptyComponent={
               <View className="flex-1 items-center justify-center py-20">
-                <Feather name="clock" size={48} color="#9CA3AF" />
-                <Text className="text-lg font-semibold text-gray-500 mt-4">
+                <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-4">
+                  <Feather name="clock" size={32} color="#9CA3AF" />
+                </View>
+                <Text className="text-xl font-bold text-gray-800 mb-2">
                   {ordersLoading ? 'Loading orders...' : 'No active orders'}
                 </Text>
-                <Text className="text-gray-400 mt-2 text-center">
+                <Text className="text-gray-500 text-center px-8">
                   Active orders will appear here when customers place orders
                 </Text>
               </View>
@@ -145,11 +203,13 @@ const AdminPanel = () => {
             }}
             ListEmptyComponent={
               <View className="flex-1 items-center justify-center py-20">
-                <Feather name="archive" size={48} color="#9CA3AF" />
-                <Text className="text-lg font-semibold text-gray-500 mt-4">
+                <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-4">
+                  <Feather name="archive" size={32} color="#9CA3AF" />
+                </View>
+                <Text className="text-xl font-bold text-gray-800 mb-2">
                   {ordersLoading ? 'Loading past orders...' : 'No past orders'}
                 </Text>
-                <Text className="text-gray-400 mt-2 text-center">
+                <Text className="text-gray-500 text-center px-8">
                   Completed and cancelled orders will appear here
                 </Text>
               </View>
@@ -158,13 +218,15 @@ const AdminPanel = () => {
         );
       case 'Analytics':
         return (
-          <View className="flex-1 items-center justify-center">
-            <Feather name="bar-chart-2" size={48} color="#9CA3AF" />
-            <Text className="text-lg font-semibold text-gray-500 mt-4">
+          <View className="flex-1 items-center justify-center px-8">
+            <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-4">
+              <Feather name="bar-chart-2" size={32} color="#9CA3AF" />
+            </View>
+            <Text className="text-xl font-bold text-gray-800 mb-2">
               Analytics Dashboard
             </Text>
-            <Text className="text-gray-400 mt-2 text-center">
-              Coming Soon
+            <Text className="text-gray-500 text-center">
+              Detailed analytics and insights coming soon
             </Text>
           </View>
         );
@@ -176,33 +238,38 @@ const AdminPanel = () => {
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-4 bg-white border-b border-gray-200">
+      <View className="flex-row items-center justify-between px-6 py-5 bg-white border-b border-gray-200 shadow-sm">
         <View className="flex-row items-center">
-          <Feather name="shield" size={24} color="#8B5CF6" />
-          <Text className="text-xl font-bold text-gray-800 ml-2">Admin Panel</Text>
+          <View className="w-12 h-12 bg-purple-100 rounded-full items-center justify-center mr-3">
+            <Feather name="shield" size={20} color="#8B5CF6" />
+          </View>
+          <View>
+            <Text className="text-xl font-bold text-gray-800">Admin Panel</Text>
+            <Text className="text-sm text-gray-500">Manage your store</Text>
+          </View>
         </View>
-        <View className="flex-row items-center">
-          <Text className="text-sm text-gray-600 mr-2">
+        <View className="bg-blue-50 px-3 py-2 rounded-full">
+          <Text className="text-sm font-semibold text-blue-600">
             {getTabCount(activeTab)} {activeTab.toLowerCase()}
           </Text>
         </View>
       </View>
 
       {/* Admin Tab Bar */}
-      <View className="bg-white border-b border-gray-100">
-        <View className="flex-row px-4 py-2">
+      <View className="bg-white border-b border-gray-100 shadow-sm">
+        <View className="flex-row px-4 py-3">
           {ADMIN_TABS.map((tab) => (
             <TouchableOpacity
               key={tab}
               onPress={() => setActiveTab(tab)}
-              className={`px-3 py-2 mr-2 rounded-full ${
+              className={`px-4 py-3 mr-3 rounded-xl ${
                 activeTab === tab
-                  ? 'bg-blue-500'
+                  ? 'bg-blue-500 shadow-sm'
                   : 'bg-gray-100'
               }`}
             >
               <Text
-                className={`font-medium text-xs ${
+                className={`font-semibold text-sm ${
                   activeTab === tab
                     ? 'text-white'
                     : 'text-gray-700'
@@ -223,6 +290,23 @@ const AdminPanel = () => {
         visible={showEditModal}
         product={selectedProduct}
         onClose={handleCloseModal}
+      />
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        buttons={alertConfig.buttons}
+        onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+      />
+
+      {/* Custom Toast */}
+      <CustomToast
+        visible={toastConfig.visible}
+        message={toastConfig.message}
+        type={toastConfig.type}
+        onHide={() => setToastConfig(prev => ({ ...prev, visible: false }))}
       />
     </SafeAreaView>
   );
