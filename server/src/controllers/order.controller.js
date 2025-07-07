@@ -140,6 +140,13 @@ export const createOrder = asyncHandler(async (req, res) => {
     const coinsEarned = Math.floor(total / 100);
     
     // Update user's coins and clear cart
+    // First, clear the cart by removing all cart items
+    await User.findOneAndUpdate(
+      { clerkId: userId },
+      { $unset: { cartItem: 1 } }
+    );
+    
+    // Then update coins and reinitialize empty cart
     const updatedUser = await User.findOneAndUpdate(
       { clerkId: userId },
       { 

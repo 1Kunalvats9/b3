@@ -61,18 +61,40 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
 
 export const updateCart = asyncHandler(async (req, res) => {
     const { cartItems, email } = req.body;
-    if (!cartItems || !Array.isArray(cartItems)) {
-        return res.status(400).json({ error: "cartItems must be a non-empty array" });
+    
+    // Allow empty array to clear cart
+    if (!Array.isArray(cartItems)) {
+        return res.status(400).json({ error: "cartItems must be an array" });
     }
+    
     if (!email) {
         return res.status(400).json({ error: "Email is required" });
     }
+    
     try {
         const user = await User.findOne({ email });
 
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
+        
+        // If cartItems is empty, clear the cart
+        if (cartItems.length === 0) {
+            // Clear cart by removing all items and reinitializing
+            await User.findOneAndUpdate(
+                { email: email },
+                { $unset: { cartItem: 1 } }
+            );
+            
+            const updatedUser = await User.findOneAndUpdate(
+                { email: email },
+                { $set: { cartItem: [] } },
+                { new: true }
+            );
+            
+            return res.status(200).json({ message: "Cart cleared successfully", user: updatedUser });
+        }
+        
         const itemsToAdd = [];
         for (const item of cartItems) {
             if (item && typeof item.barcode === 'number') {
@@ -85,10 +107,8 @@ export const updateCart = asyncHandler(async (req, res) => {
             }
         }
 
-        if (itemsToAdd.length === 0 && cartItems.length > 0) {
-            return res.status(200).json({ message: "All provided items are already in the cart." });
-        } else if (itemsToAdd.length === 0) {
-            return res.status(200).json({ message: "No new items to add to the cart." });
+        if (itemsToAdd.length === 0) {
+            return res.status(200).json({ message: "All provided items are already in the cart or no new items to add." });
         }
 
         const updatedUser = await User.findOneAndUpdate(
