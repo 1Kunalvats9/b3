@@ -400,7 +400,7 @@ const Cart = () => {
               <View className="flex-row space-x-4">
                 <TouchableOpacity
                   onPress={() => setDeliveryOption('delivery')}
-                  className={`flex-1 flex-row items-center justify-center py-4 px-4 mx-1 rounded-xl border-2 ${
+                  className={`flex-1 flex-row items-center justify-center py-4 px-4 rounded-xl border-2 ${
                     deliveryOption === 'delivery' ? 'bg-purple-50 border-purple-500' : 'bg-gray-50 border-gray-200'
                   }`}
                 >
@@ -412,7 +412,7 @@ const Cart = () => {
 
                 <TouchableOpacity
                   onPress={() => setDeliveryOption('takeaway')}
-                  className={`flex-1 flex-row items-center justify-center py-4 px-4 mx-1 rounded-xl border-2 ${
+                  className={`flex-1 flex-row items-center justify-center py-4 px-4 rounded-xl border-2 ${
                     deliveryOption === 'takeaway' ? 'bg-purple-50 border-purple-500' : 'bg-gray-50 border-gray-200'
                   }`}
                 >
@@ -446,7 +446,7 @@ const Cart = () => {
               <View className="flex-row space-x-4">
                 <TouchableOpacity
                   onPress={() => setPaymentOption('online')}
-                  className={`flex-1 flex-row items-center justify-center py-4 px-4 rounded-xl border-2 ${
+                  className={`flex-1 flex-row items-center justify-center py-4 px-4 mx-1 rounded-xl border-2 ${
                     paymentOption === 'online' ? 'bg-green-50 border-green-500' : 'bg-gray-50 border-gray-200'
                   }`}
                 >
@@ -458,7 +458,7 @@ const Cart = () => {
 
                 <TouchableOpacity
                   onPress={() => setPaymentOption('cod')}
-                  className={`flex-1 flex-row items-center justify-center py-4 px-4 rounded-xl border-2 ${
+                  className={`flex-1 flex-row items-center justify-center py-4 px-4 mx-1 rounded-xl border-2 ${
                     paymentOption === 'cod' ? 'bg-green-50 border-green-500' : 'bg-gray-50 border-gray-200'
                   }`}
                 >

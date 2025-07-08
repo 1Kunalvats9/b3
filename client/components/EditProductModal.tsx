@@ -191,7 +191,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ visible, product, o
 
         <ScrollView className="flex-1 px-4 py-6">
           {/* Product Image */}
-          <View className="mb-6">
+          <View className="mb-8">
             <Text className="text-base font-medium text-gray-700 mb-3">Product Image</Text>
             <TouchableOpacity
               onPress={pickImage}
@@ -216,7 +216,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ visible, product, o
           </View>
 
           {/* Product Name */}
-          <View className="mb-4">
+          <View className="mb-6">
             <Text className="text-base font-medium text-gray-700 mb-2">Product Name *</Text>
             <TextInput
               value={formData.name}
@@ -227,15 +227,15 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ visible, product, o
           </View>
 
           {/* Category */}
-          <View className="mb-4">
+          <View className="mb-6">
             <Text className="text-base font-medium text-gray-700 mb-2">Category</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View className="flex-row">
+              <View className="flex-row px-2">
                 {CATEGORIES.map((category) => (
                   <TouchableOpacity
                     key={category}
                     onPress={() => setFormData(prev => ({ ...prev, category: category.toLowerCase() }))}
-                    className={`px-4 py-2 mr-2 rounded-full border ${
+                    className={`px-4 py-3 mx-1 rounded-full border ${
                       formData.category === category.toLowerCase()
                         ? 'bg-blue-500 border-blue-500'
                         : 'bg-white border-gray-300'
@@ -257,7 +257,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ visible, product, o
           </View>
 
           {/* Price */}
-          <View className="mb-4">
+          <View className="mb-6">
             <Text className="text-base font-medium text-gray-700 mb-2">Price *</Text>
             <TextInput
               value={formData.price}
@@ -269,7 +269,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ visible, product, o
           </View>
 
           {/* Quantity */}
-          <View className="mb-6">
+          <View className="mb-8">
             <Text className="text-base font-medium text-gray-700 mb-2">Quantity *</Text>
             <TextInput
               value={formData.quantity}

@@ -38,8 +38,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isAdmin = false, onE
 
   return (
     <View 
-      className="bg-white rounded-xl shadow-sm border border-gray-100 mb-4 overflow-hidden" 
-      style={{ width: cardWidth, height: 280 }}
+      className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" 
+      style={{ width: cardWidth, height: 280, marginBottom: 16 }}
     >
       {/* Product Image */}
       <View className="h-32 bg-gray-50 relative">
