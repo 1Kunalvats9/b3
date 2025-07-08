@@ -181,24 +181,6 @@ export const createOrder = asyncHandler(async (req, res) => {
       // Don't fail the order if SMS fails
     }
 
-    // Emit socket event to admin
-    try {
-      const io = req.app.get('io');
-      if (io) {
-        console.log('Emitting new-order event to admin room');
-        io.to('admin').emit('new-order', {
-          order: savedOrder,
-          message: `New order #${orderNumber} received!`
-        });
-        console.log('Socket event emitted to admin');
-      } else {
-        console.warn('Socket.io instance not found');
-      }
-    } catch (socketError) {
-      console.error('Socket emission failed:', socketError);
-      // Don't fail the order if socket fails
-    }
-
     console.log(`User ${user.email} earned ${coinsEarned} coins for order ${savedOrder._id}`);
 
     res.status(201).json({
@@ -259,21 +241,6 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     
     if (smsMessage) {
       await sendSMSNotification(updatedOrder.phoneNumber, smsMessage);
-    }
-
-    // Emit socket event to user
-    const io = req.app.get('io');
-    if (io) {
-      console.log(`Emitting order-status-updated to user-${updatedOrder.userId}`);
-      io.to(`user-${updatedOrder.userId}`).emit('order-status-updated', {
-        orderId: updatedOrder._id,
-        status: status,
-        orderNumber: orderNumber,
-        message: `Your order #${orderNumber} is now ${status}`
-      });
-      console.log('Socket event emitted to user');
-    } else {
-      console.warn('Socket.io instance not found');
     }
 
     res.status(200).json(updatedOrder);

@@ -1,8 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
 import userRoutes from "./routes/user.routes.js";
 import productRoutes from "./routes/products.route.js";
 import orderRoutes from "./routes/order.routes.js";
@@ -13,95 +11,9 @@ import connectDb from './utils/connectDb.js';
 dotenv.config();
 
 const app = express();
-const server = createServer(app);
 
-// Enhanced Socket.io configuration
-const io = new Server(server, {
-    cors: {
-        origin: function(origin, callback) {
-            // Allow requests with no origin (mobile apps, curl, etc.)
-            if (!origin) return callback(null, true);
-            
-            const allowedOrigins = [
-                'http://localhost:8081',
-                'https://b3-iota.vercel.app',
-                /^http:\/\/192\.168\.\d+\.\d+:8081$/,
-                /^http:\/\/10\.\d+\.\d+\.\d+:8081$/,
-                /^http:\/\/172\.\d+\.\d+\.\d+:8081$/
-            ];
-            
-            const isAllowed = allowedOrigins.some(allowedOrigin => {
-                if (typeof allowedOrigin === 'string') {
-                    return origin === allowedOrigin;
-                } else if (allowedOrigin instanceof RegExp) {
-                    return allowedOrigin.test(origin);
-                }
-                return false;
-            });
-            
-            callback(null, true); // Allow all for development
-        },
-        methods: ["GET", "POST", "PUT", "DELETE"],
-        credentials: true,
-        allowedHeaders: ["Content-Type", "Authorization"]
-    },
-    transports: ['polling', 'websocket'], // Try polling first for better compatibility
-    allowEIO3: true,
-    pingTimeout: 60000,
-    pingInterval: 25000,
-    upgradeTimeout: 30000,
-    maxHttpBufferSize: 1e6,
-    connectTimeout: 45000
-});
-
-// Make io available to controllers
-app.set('io', io);
-
-// Socket.io connection handling
-io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
-    
-    // Send welcome message to confirm connection
-    socket.emit('connected', { 
-        message: 'Connected to server successfully',
-        socketId: socket.id 
-    });
-    
-    socket.on('join-admin', () => {
-        socket.join('admin');
-        console.log('Admin joined:', socket.id);
-        socket.emit('admin-joined', { message: 'Successfully joined admin room' });
-    });
-    
-    socket.on('join-user', (userId) => {
-        socket.join(`user-${userId}`);
-        console.log('User joined room:', `user-${userId}`);
-        socket.emit('user-joined', { message: `Successfully joined user room: ${userId}` });
-    });
-    
-    // Handle connection errors
-    socket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
-    });
-    
-    // Handle ping/pong for connection health
-    socket.on('ping', () => {
-        socket.emit('pong');
-    });
-    
-    socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
-    });
-    
-    // Handle any socket errors
-    socket.on('error', (error) => {
-        console.error('Socket error:', error);
-    });
-});
-
-// Enhanced CORS configuration
 const corsOptions = {
-    origin: true, // Allow all origins for now to bypass Vercel security
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
@@ -116,7 +28,6 @@ const corsOptions = {
         app.use(cors(corsOptions));
         app.use(express.json());
         
-        // Add security headers to prevent Vercel security checkpoint
         app.use((req, res, next) => {
             res.setHeader('X-Content-Type-Options', 'nosniff');
             res.setHeader('X-Frame-Options', 'DENY');
@@ -127,14 +38,12 @@ const corsOptions = {
         
         app.use(clerkMiddleware());
         
-        // Add request logging middleware
         app.use((req, res, next) => {
             console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
             console.log('Headers:', req.headers.authorization ? 'Authorization header present' : 'No authorization header');
             next();
         });
         
-        // Add error handling middleware
         app.use((err, req, res, next) => {
             console.error('Unhandled error:', err);
             if (!res.headersSent) {
@@ -145,24 +54,20 @@ const corsOptions = {
             }
         });
         
-        // Handle preflight requests
         app.options('*', (req, res) => {
             res.status(200).json({
                 message: 'Preflight OK'
             });
         });
         
-        // Add a health check that bypasses auth
         app.get('/api/health', (req, res) => {
             res.json({ 
                 status: 'OK', 
                 timestamp: new Date().toISOString(),
-                socketConnections: io.engine.clientsCount,
                 environment: process.env.NODE_ENV || 'development'
             });
         });
         
-        // Add middleware to ensure JSON responses
         app.use((req, res, next) => {
             const originalSend = res.send;
             res.send = function(data) {
@@ -174,7 +79,6 @@ const corsOptions = {
             next();
         });
         
-        // Final error handler
         app.use((err, req, res, next) => {
             console.error('Final error handler:', err);
             if (!res.headersSent) {
@@ -185,15 +89,6 @@ const corsOptions = {
             }
         });
         
-        // 404 handler
-        app.use('*', (req, res) => {
-            res.status(404).json({ 
-                error: 'Internal server error',
-                details: err.message 
-            });
-        });
-
-        // Routes
         app.use('/api/users', userRoutes);
         app.use('/api/products', productRoutes);
         app.use('/api/orders', orderRoutes);
@@ -207,10 +102,17 @@ const corsOptions = {
                 version: '1.0.0'
             });
         });
+
+        // Updated 404 handler for Express 5+
+        app.use('*', (req, res) => {
+            res.status(404).json({ 
+                error: 'Not Found',
+                message: `The requested URL ${req.originalUrl} was not found on this server.`
+            });
+        });
         
-        server.listen(process.env.PORT || 3000, () => {
+        app.listen(process.env.PORT || 3000, () => {
             console.log(`Server is starting on port ${process.env.PORT || 3000} ✅`);
-            console.log(`Socket.io server ready for connections 🔌`);
             console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
         });
 
