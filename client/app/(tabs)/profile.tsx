@@ -11,14 +11,12 @@ import CustomAlert from '@/components/CustomAlert';
 import CustomToast from '@/components/CustomToast';
 import { useOrders } from '@/hooks/useOrders';
 import { useUser } from '@/hooks/useUser';
-import { useSocket } from '@/hooks/useSocket';
 
 const Profile = () => {
   const { signOut, isSignedIn, userId } = useAuth();
   const { user: clerkUser } = useClerkUser();
   const { userData, fetchUserData } = useUser();
   const { orders, isLoading: ordersLoading, fetchOrders } = useOrders();
-  const { onOrderStatusUpdate, offOrderStatusUpdate, isConnected } = useSocket();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'orders'>('profile');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -42,22 +40,7 @@ const Profile = () => {
     if (activeTab === 'orders') {
       fetchOrders();
     }
-
-    // Listen for order status updates only if connected
-    if (isConnected) {
-      onOrderStatusUpdate((data) => {
-        console.log('Order status update received:', data);
-        showToast(data.message, 'info');
-        if (activeTab === 'orders') {
-          fetchOrders(); // Refresh orders
-        }
-      });
-    }
-
-    return () => {
-      offOrderStatusUpdate();
-    };
-  }, [activeTab, isConnected]);
+  }, [activeTab]);
 
   const showAlert = (title: string, message: string, buttons: Array<{text: string; onPress: () => void; style?: 'default' | 'cancel' | 'destructive'}>) => {
     setAlertConfig({

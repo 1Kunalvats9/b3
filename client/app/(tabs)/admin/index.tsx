@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useProducts, Product } from '@/hooks/useProducts';
 import { useOrders, Order } from '@/hooks/useOrders';
-import { useSocket } from '@/hooks/useSocket';
 import ProductCard from '@/components/ProductCard';
 import OrderCard from '@/components/OrderCard';
 import EditProductModal from '@/components/EditProductModal';
@@ -16,7 +15,6 @@ const ADMIN_TABS = ['Active Orders', 'Past Orders', 'Products', 'Analytics'];
 const AdminPanel = () => {
   const { products, isLoading: productsLoading, fetchProducts } = useProducts();
   const { orders, isLoading: ordersLoading, fetchAllOrders, updateOrderStatus } = useOrders();
-  const { joinAdminRoom, onNewOrder, offNewOrder, isConnected, reconnect } = useSocket();
   const [activeTab, setActiveTab] = useState('Active Orders');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -45,34 +43,6 @@ const AdminPanel = () => {
     ['delivered', 'cancelled'].includes(order.status)
   );
 
-  useEffect(() => {
-    // Join admin room for real-time updates
-    if (isConnected) {
-      joinAdminRoom();
-    } else {
-      console.log('Socket not connected, attempting to reconnect...');
-      reconnect();
-      // Try joining admin room after a short delay
-      setTimeout(() => {
-        if (isConnected) {
-          joinAdminRoom();
-        }
-      }, 2000);
-    }
-
-    // Listen for new orders
-    onNewOrder((data) => {
-      console.log('New order received:', data);
-      showToast(`New order #${data.order._id.slice(-6).toUpperCase()} received!`, 'info');
-      fetchAllOrders(); // Refresh orders
-    });
-
-    return () => {
-      offNewOrder();
-    };
-  }, [isConnected]);
-
-  // Fetch appropriate data based on active tab
   useEffect(() => {
     if (activeTab === 'Active Orders' || activeTab === 'Past Orders') {
       fetchAllOrders();
