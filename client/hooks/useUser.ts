@@ -29,18 +29,47 @@ export const useUser = () => {
         throw new Error('No authentication token available');
       }
 
+      console.log('Fetching user data with token:', token ? 'Token available' : 'No token');
+      console.log('API URL:', `${API_BASE_URL}/api/users/me`);
+
       const response = await fetch(`${API_BASE_URL}/api/users/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
       });
 
+      console.log('User data response status:', response.status);
+      
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('Non-JSON response received:', textResponse);
+        throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`);
+      }
+
       if (!response.ok) {
-        const errorData = await response.json();
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          const textResponse = await response.text();
+          console.error('Failed to parse error response:', textResponse);
+          throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        }
         throw new Error(errorData.error || 'Failed to fetch user data');
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        const textResponse = await response.text();
+        console.error('Failed to parse success response:', textResponse);
+        throw new Error('Server returned invalid JSON response');
+      }
+      
       setUserData(data.user);
       return data.user;
     } catch (err) {
@@ -54,7 +83,9 @@ export const useUser = () => {
   };
 
   useEffect(() => {
-    fetchUserData();
+    fetchUserData().catch(error => {
+      console.error('Initial user data fetch failed:', error);
+    });
   }, []);
 
   return {

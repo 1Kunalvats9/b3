@@ -10,8 +10,12 @@ export default function AuthLayout() {
     useEffect(() => {
         // Sync user when they sign in
         if (isSignedIn && isLoaded) {
-            syncUser().catch(error => {
+            console.log('User signed in, attempting sync...');
+            syncUser().then(() => {
+                console.log('User sync completed successfully');
+            }).catch(error => {
                 console.error('Failed to sync user on sign in:', error);
+                // Don't block the user from proceeding if sync fails
             });
         }
     }, [isSignedIn, isLoaded]);

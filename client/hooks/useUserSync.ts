@@ -17,6 +17,9 @@ export const useUserSync = () => {
         throw new Error('No authentication token available');
       }
 
+      console.log('Syncing user with token:', token ? 'Token available' : 'No token');
+      console.log('API URL:', `${API_BASE_URL}/api/users/sync`);
+
       const response = await fetch(`${API_BASE_URL}/api/users/sync`, {
         method: 'POST',
         headers: {
@@ -25,12 +28,38 @@ export const useUserSync = () => {
         },
       });
 
+      console.log('Sync response status:', response.status);
+      console.log('Sync response headers:', response.headers);
+      
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('Non-JSON response received:', textResponse);
+        throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`);
+      }
+
       if (!response.ok) {
-        const errorData = await response.json();
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          const textResponse = await response.text();
+          console.error('Failed to parse error response:', textResponse);
+          throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        }
         throw new Error(errorData.error || 'Failed to sync user');
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        const textResponse = await response.text();
+        console.error('Failed to parse success response:', textResponse);
+        throw new Error('Server returned invalid JSON response');
+      }
+      
       console.log('User sync successful:', data.message);
       return data;
     } catch (err) {

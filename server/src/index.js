@@ -142,6 +142,22 @@ const corsOptions = {
         app.use(cors(corsOptions));
         app.use(express.json());
         app.use(clerkMiddleware());
+        
+        // Add request logging middleware
+        app.use((req, res, next) => {
+            console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+            console.log('Headers:', req.headers.authorization ? 'Authorization header present' : 'No authorization header');
+            next();
+        });
+        
+        // Add error handling middleware
+        app.use((err, req, res, next) => {
+            console.error('Unhandled error:', err);
+            res.status(500).json({ 
+                error: 'Internal server error',
+                details: err.message 
+            });
+        });
 
         // Routes
         app.use('/api/users', userRoutes);
@@ -150,7 +166,11 @@ const corsOptions = {
         app.use('/api/sendSms', messageRoutes);
         
         app.get('/', (req, res) => {
-            res.send('Hello from Server !! 🎉');
+            res.json({ 
+                message: 'Hello from Server !! 🎉',
+                timestamp: new Date().toISOString(),
+                status: 'OK'
+            });
         });
         
         // Health check endpoint
@@ -159,6 +179,15 @@ const corsOptions = {
                 status: 'OK', 
                 timestamp: new Date().toISOString(),
                 socketConnections: io.engine.clientsCount 
+            });
+        });
+        
+        // Catch-all route for unmatched paths
+        app.use('*', (req, res) => {
+            res.status(404).json({ 
+                error: 'Route not found',
+                path: req.originalUrl,
+                method: req.method
             });
         });
 
