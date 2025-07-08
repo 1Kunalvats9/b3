@@ -18,17 +18,40 @@ const server = createServer(app);
 // Enhanced Socket.io configuration
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:8081", "https://b3-iota.vercel.app", "*"],
+        origin: function(origin, callback) {
+            // Allow requests with no origin (mobile apps, curl, etc.)
+            if (!origin) return callback(null, true);
+            
+            const allowedOrigins = [
+                'http://localhost:8081',
+                'https://b3-iota.vercel.app',
+                /^http:\/\/192\.168\.\d+\.\d+:8081$/,
+                /^http:\/\/10\.\d+\.\d+\.\d+:8081$/,
+                /^http:\/\/172\.\d+\.\d+\.\d+:8081$/
+            ];
+            
+            const isAllowed = allowedOrigins.some(allowedOrigin => {
+                if (typeof allowedOrigin === 'string') {
+                    return origin === allowedOrigin;
+                } else if (allowedOrigin instanceof RegExp) {
+                    return allowedOrigin.test(origin);
+                }
+                return false;
+            });
+            
+            callback(null, true); // Allow all for development
+        },
         methods: ["GET", "POST", "PUT", "DELETE"],
         credentials: true,
         allowedHeaders: ["Content-Type", "Authorization"]
     },
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'], // Try polling first for better compatibility
     allowEIO3: true,
     pingTimeout: 60000,
     pingInterval: 25000,
     upgradeTimeout: 30000,
-    maxHttpBufferSize: 1e6
+    maxHttpBufferSize: 1e6,
+    connectTimeout: 45000
 });
 
 // Make io available to controllers

@@ -25,12 +25,12 @@ const CustomToast: React.FC<CustomToastProps> = ({
       Animated.parallel([
         Animated.timing(translateY, {
           toValue: 0,
-          duration: 300,
+          duration: 400,
           useNativeDriver: true,
         }),
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 300,
+          duration: 400,
           useNativeDriver: true,
         }),
       ]).start();
@@ -47,12 +47,12 @@ const CustomToast: React.FC<CustomToastProps> = ({
     Animated.parallel([
       Animated.timing(translateY, {
         toValue: -100,
-        duration: 300,
+        duration: 400,
         useNativeDriver: true,
       }),
       Animated.timing(opacity, {
         toValue: 0,
-        duration: 300,
+        duration: 400,
         useNativeDriver: true,
       }),
     ]).start(() => {

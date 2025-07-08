@@ -246,14 +246,13 @@ const Cart = () => {
       setDeliveryOption('delivery');
       setPaymentOption('online');
 
-      showToast('Order placed successfully!', 'success');
 
     } catch (error) {
       console.error('Order placement error:', error);
       console.error('Error details:', error instanceof Error ? error.message : error);
       showAlert(
         'Order Failed',
-        error instanceof Error ? error.message : 'Something went wrong. Please try again.',
+        `Failed to place order: ${error instanceof Error ? error.message : 'Something went wrong. Please try again.'}`,
         [{ text: 'OK', onPress: () => {} }]
       );
     } finally {

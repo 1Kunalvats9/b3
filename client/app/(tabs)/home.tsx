@@ -9,6 +9,7 @@ import ProductCard from '@/components/ProductCard';
 import SortModal from '@/components/SortModal';
 import { useProducts, Product } from '@/hooks/useProducts';
 import { useUserSync } from '@/hooks/useUserSync';
+import CustomToast from '@/components/CustomToast';
 
 const CATEGORIES = [
   'All',
@@ -35,6 +36,21 @@ const Home = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Toast states
+  const [toastConfig, setToastConfig] = useState({
+    visible: false,
+    message: '',
+    type: 'info' as 'success' | 'error' | 'info' | 'warning'
+  });
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+    setToastConfig({
+      visible: true,
+      message,
+      type
+    });
+  };
 
   useEffect(() => {
     if (isSignedIn && isLoaded && !userSynced) {
@@ -108,7 +124,7 @@ const Home = () => {
   };
 
   const renderProduct = ({ item }: { item: Product }) => (
-    <ProductCard product={item} />
+    <ProductCard product={item} onShowToast={showToast} />
   );
 
   if (!isLoaded) {
@@ -182,9 +198,14 @@ const Home = () => {
         keyExtractor={(item) => item._id}
         numColumns={2}
         contentContainerStyle={{
-          paddingHorizontal: 8,
+          paddingHorizontal: 16,
           paddingVertical: 12,
-          paddingBottom: 100
+          paddingBottom: 100,
+          alignItems: 'center'
+        }}
+        columnWrapperStyle={{
+          justifyContent: 'space-between',
+          paddingHorizontal: 8
         }}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
@@ -214,6 +235,14 @@ const Home = () => {
         onClose={() => setShowSortModal(false)}
         onSortSelect={setSortBy}
         currentSort={sortBy}
+      />
+
+      {/* Custom Toast */}
+      <CustomToast
+        visible={toastConfig.visible}
+        message={toastConfig.message}
+        type={toastConfig.type}
+        onHide={() => setToastConfig(prev => ({ ...prev, visible: false }))}
       />
     </SafeAreaView>
   );

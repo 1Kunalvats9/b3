@@ -39,20 +39,20 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
         // Scale in circle
         Animated.spring(scaleAnim, {
           toValue: 1,
-          tension: 100,
-          friction: 8,
+          tension: 80,
+          friction: 6,
           useNativeDriver: true,
         }),
         // Animate check mark
         Animated.timing(checkAnim, {
           toValue: 1,
-          duration: 500,
+          duration: 600,
           useNativeDriver: true,
         }),
         // Confetti animation
         Animated.timing(confettiAnim, {
           toValue: 1,
-          duration: 800,
+          duration: 1000,
           useNativeDriver: true,
         }),
       ]).start();
@@ -60,7 +60,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
       // Auto close after 4 seconds
       const timer = setTimeout(() => {
         onClose();
-      }, 4000);
+      }, 5000);
 
       return () => clearTimeout(timer);
     }

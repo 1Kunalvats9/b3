@@ -111,11 +111,12 @@ export const useOrders = () => {
       });
 
       console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
       
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Order creation error response:', errorData);
-        throw new Error(errorData.error || errorData.message || `Failed to create order (${response.status})`);
+        throw new Error(errorData.error || errorData.message || errorData.details || `Failed to create order (${response.status})`);
       }
 
       const data = await response.json();
@@ -127,7 +128,8 @@ export const useOrders = () => {
       return data;
     } catch (err) {
       console.error('Create order error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred while creating order';
+      setError(errorMessage);
       throw err;
     } finally {
       setIsLoading(false);

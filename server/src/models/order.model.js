@@ -24,7 +24,11 @@ const orderSchema = new mongoose.Schema({
     required: true, 
     enum: ['online', 'cod'] 
   },
-  address: { type: String, required: true },
+  address: { 
+    type: String, 
+    required: true,
+    default: 'Store Pickup'
+  },
   phoneNumber: { type: String, required: true },
   status: { 
     type: String, 
