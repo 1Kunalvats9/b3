@@ -155,10 +155,18 @@ export const createOrder = asyncHandler(async (req, res) => {
     const coinsEarned = Math.floor(total / 100);
     
     // Update user's coins and clear cart in a single operation
-    const updatedUser = await User.findOneAndUpdate(
+    // First, get the current user to ensure we have the latest state
+    const currentUser = await User.findOne({ clerkId: userId });
+    if (!currentUser) {
+      throw new Error('User not found during cart update');
+    }
+    
+    // Clear cart and update coins
+    const updatedUser = await User.findByIdAndUpdate(
+      currentUser._id,
       { clerkId: userId },
       { 
-        $set: { cartItem: [] },
+        $set: { cartItem: [] }, // Clear cart completely
         $inc: { coins: coinsEarned }
       },
       { new: true }

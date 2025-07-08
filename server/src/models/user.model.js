@@ -3,8 +3,7 @@ import mongoose, { mongo } from "mongoose";
 const cartItem = new mongoose.Schema({
     barcode: { 
         type: Number, 
-        required: true,
-        sparse: true  // This allows multiple documents with null/undefined values
+        required: true
     }
 }, { timestamps: true })
 
@@ -22,7 +21,10 @@ const userSchema = new mongoose.Schema(
             type: String,
             default: "",
         },
-        cartItem: [cartItem],
+        cartItem: {
+            type: [cartItem],
+            default: []
+        },
         coins: {
             type: Number,
             default: 0
@@ -31,9 +33,10 @@ const userSchema = new mongoose.Schema(
     { timestamps: true }
 )
 
-// Remove the unique constraint from cartItem.barcode to prevent duplicate key errors
-// when clearing cart (setting to empty array)
-userSchema.index({ 'cartItem.barcode': 1 }, { sparse: true });
+// Remove the problematic index that's causing the duplicate key error
+// We'll handle uniqueness at the application level instead
+userSchema.index({ clerkId: 1 });
+userSchema.index({ email: 1 });
 
 const User = mongoose.model('User', userSchema);
 export default User

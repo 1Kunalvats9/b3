@@ -53,6 +53,16 @@ const Cart = () => {
   useEffect(() => {
     loadCartItems();
   }, []);
+  
+  // Show loading state initially
+  useEffect(() => {
+    setIsCartLoading(true);
+    const timer = setTimeout(() => {
+      loadCartItems();
+    }, 500); // Small delay to show loader
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (cartItems.length > 0 && products.length > 0) {
@@ -327,9 +337,21 @@ const Cart = () => {
       <Header title="Shopping Cart" showProfile={false} />
 
       {isCartLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text className="text-lg text-gray-600 mt-4">Loading cart...</Text>
+        <View className="flex-1 items-center justify-center bg-gray-50">
+          <View className="bg-white rounded-2xl p-8 shadow-lg items-center">
+            <View className="w-20 h-20 bg-purple-100 rounded-full items-center justify-center mb-4">
+              <ActivityIndicator size="large" color="#8B5CF6" />
+            </View>
+            <Text className="text-xl font-bold text-gray-800 mb-2">Loading Cart</Text>
+            <Text className="text-gray-500 text-center">
+              Please wait while we fetch your items...
+            </Text>
+            <View className="flex-row mt-4 space-x-2">
+              <View className="w-2 h-2 bg-purple-300 rounded-full animate-pulse" />
+              <View className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
+              <View className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
+            </View>
+          </View>
         </View>
       ) : cartProducts.length > 0 ? (
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
