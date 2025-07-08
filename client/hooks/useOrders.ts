@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-expo';
 
-const API_BASE_URL = 'https://b3-iota.vercel.app';
+const API_BASE_URL = process.env.DEV_URL||'https://b3-iota.vercel.app';
 
 export interface OrderItem {
   _id: string;
@@ -101,7 +101,7 @@ export const useOrders = () => {
       console.log('Creating order with data:', orderData);
       console.log('API URL:', `${API_BASE_URL}/api/orders`);
       
-      const response = await fetch(`${API_BASE_URL}/api/orders`, {
+      const response = await fetch(`${API_BASE_URL}/api/orders/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

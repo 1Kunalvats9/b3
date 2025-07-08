@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import "../global.css"
 import { ClerkProvider } from "@clerk/clerk-expo";
 import { tokenCache } from "@clerk/clerk-expo/token-cache";
+import { NavigationContainer } from "@react-navigation/native";
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!
 

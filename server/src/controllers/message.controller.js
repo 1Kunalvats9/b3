@@ -1,6 +1,6 @@
-import { Twilio } from 'twilio';
-import { NextResponse } from 'next/server';
+import pkg from 'twilio';
 import asyncHandler from 'express-async-handler';
+const { Twilio } = pkg;
 
 const client = new Twilio(
   process.env.TWILIO_ACCOUNT_SID,
@@ -15,9 +15,9 @@ export const sendSMS = asyncHandler(async (req, res) => {
         from: process.env.TWILIO_PHONE_NUMBER,
         to: `+91${phoneNumber}`,
       });
-      return NextResponse.json({ success: true, sid: message.sid }, { status: 200 });
+      return res.status(200).json({ success: true, sid: message.sid });
     } catch (err) {
       console.error('❌ SMS Error:', err);
-      return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+      return res.status(500).json({ success: false, error: err.message });
     }
   });

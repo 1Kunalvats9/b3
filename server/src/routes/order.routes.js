@@ -10,7 +10,7 @@ import {
 const router = express.Router();
 
 router.get('/', protectRoute, getAllOrders);
-router.post('/', protectRoute, createOrder);
+router.post('/create', protectRoute, createOrder);
 router.put('/:id/status', protectRoute, updateOrderStatus);
 router.get('/user', protectRoute, getUserOrders);
 
