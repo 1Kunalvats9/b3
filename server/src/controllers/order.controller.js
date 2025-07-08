@@ -60,14 +60,23 @@ const sendSMSNotification = async (phoneNumber, message) => {
       return;
     }
     
+    if (!process.env.TWILIO_PHONE_NUMBER) {
+      console.log('SMS not sent - Twilio phone number not configured');
+      return;
+    }
+    
     await client.messages.create({
       body: message,
       from: process.env.TWILIO_PHONE_NUMBER,
-      to: `+91${phoneNumber}`,
+      to: phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`,
     });
     console.log('SMS sent successfully to:', phoneNumber);
   } catch (error) {
-    console.error('SMS sending failed:', error);
+    console.error('SMS sending failed:', error.message);
+    // Log more details for debugging
+    if (error.code) {
+      console.error('Twilio error code:', error.code);
+    }
   }
 };
 
@@ -110,6 +119,11 @@ export const createOrder = asyncHandler(async (req, res) => {
     if (!phoneNumber || typeof phoneNumber !== 'string') {
       return res.status(400).json({ error: "Phone number is required" });
     }
+    
+    if (deliveryOption === 'delivery' && (!address || typeof address !== 'string' || address.trim() === '')) {
+      return res.status(400).json({ error: "Address is required for delivery orders" });
+    }
+    
     // Get user details
     const user = await User.findOne({ clerkId: userId });
     if (!user) {
@@ -118,6 +132,7 @@ export const createOrder = asyncHandler(async (req, res) => {
     }
 
     console.log('Found user:', user.email);
+    
     // Create new order
     const order = new Order({
       userId: userId,
@@ -126,7 +141,7 @@ export const createOrder = asyncHandler(async (req, res) => {
       total,
       deliveryOption,
       paymentOption,
-      address,
+      address: deliveryOption === 'delivery' ? address : 'Store Pickup',
       phoneNumber,
       status: 'pending'
     });
@@ -139,14 +154,7 @@ export const createOrder = asyncHandler(async (req, res) => {
     // Calculate coins earned (1 coin per 100 rupees)
     const coinsEarned = Math.floor(total / 100);
     
-    // Update user's coins and clear cart
-    // First, clear the cart by removing all cart items
-    await User.findOneAndUpdate(
-      { clerkId: userId },
-      { $unset: { cartItem: 1 } }
-    );
-    
-    // Then update coins and reinitialize empty cart
+    // Update user's coins and clear cart in a single operation
     const updatedUser = await User.findOneAndUpdate(
       { clerkId: userId },
       { 
@@ -196,7 +204,10 @@ export const createOrder = asyncHandler(async (req, res) => {
   } catch (error) {
     console.error("Error creating order:", error);
     console.error("Error stack:", error.stack);
-    res.status(500).json({ error: "Server error while creating order." });
+    res.status(500).json({ 
+      error: "Server error while creating order.",
+      details: error.message 
+    });
   }
 });
 

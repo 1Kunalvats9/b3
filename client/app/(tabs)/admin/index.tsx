@@ -119,11 +119,13 @@ const AdminPanel = () => {
   };
 
   const renderProduct = ({ item }: { item: Product }) => (
-    <ProductCard 
-      product={item} 
-      isAdmin={true}
-      onEdit={handleEditProduct}
-    />
+    <View style={{ width: '48%', marginBottom: 16 }}>
+      <ProductCard 
+        product={item} 
+        isAdmin={true}
+        onEdit={handleEditProduct}
+      />
+    </View>
   );
 
   const renderOrder = ({ item }: { item: Order }) => (
@@ -148,17 +150,16 @@ const AdminPanel = () => {
       case 'Products':
         return (
           <FlatList
-            key="products-grid"
             data={products}
             renderItem={renderProduct}
             keyExtractor={(item) => item._id}
             numColumns={2}
             contentContainerStyle={{ 
-              paddingHorizontal: 8,
+              paddingHorizontal: 16,
               paddingVertical: 12,
               paddingBottom: 100 
             }}
-            columnWrapperStyle={{ justifyContent: 'space-around' }}
+            columnWrapperStyle={{ justifyContent: 'space-between' }}
             ListEmptyComponent={
               <View className="flex-1 items-center justify-center py-20">
                 <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-4">

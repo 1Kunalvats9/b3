@@ -1,26 +1,32 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, Alert, Dimensions } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useCart } from '@/hooks/useCart';
 import { Product } from '@/hooks/useProducts';
+import CustomToast from './CustomToast';
 
 interface ProductCardProps {
   product: Product;
   isAdmin?: boolean;
   onEdit?: (product: Product) => void;
+  onShowToast?: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, isAdmin = false, onEdit }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, isAdmin = false, onEdit, onShowToast }) => {
   const { addToCart, isLoading } = useCart();
   const screenWidth = Dimensions.get('window').width;
-  const cardWidth = (screenWidth - 32) / 2 - 8; // Account for padding and margins
+  const cardWidth = (screenWidth - 48) / 2; // Account for padding and margins
 
   const handleAddToCart = async () => {
     try {
       await addToCart(product.barcode);
-      Alert.alert('Success', `${product.name} added to cart!`);
+      if (onShowToast) {
+        onShowToast(`${product.name} added to cart!`, 'success');
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to add item to cart');
+      if (onShowToast) {
+        onShowToast('Failed to add item to cart', 'error');
+      }
     }
   };
 
@@ -32,7 +38,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isAdmin = false, onE
 
   return (
     <View 
-      className="bg-white rounded-xl shadow-sm border border-gray-100 m-1 overflow-hidden" 
+      className="bg-white rounded-xl shadow-sm border border-gray-100 mb-4 overflow-hidden" 
       style={{ width: cardWidth, height: 280 }}
     >
       {/* Product Image */}

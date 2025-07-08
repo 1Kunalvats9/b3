@@ -15,14 +15,15 @@ export const useSocket = () => {
     
     socketRef.current = io(SOCKET_URL, {
       transports: ['polling', 'websocket'], // Try polling first, then websocket
-      timeout: 20000,
+      timeout: 30000,
       forceNew: true,
       reconnection: true,
       reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnectionDelay: 2000,
       reconnectionDelayMax: 5000,
       autoConnect: true,
-      upgrade: true
+      upgrade: true,
+      rememberUpgrade: false
     });
 
     const socket = socketRef.current;
