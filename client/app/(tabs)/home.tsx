@@ -54,12 +54,16 @@ const Home = () => {
 
   useEffect(() => {
     if (isSignedIn && isLoaded && !userSynced) {
+      console.log('Home page - attempting user sync...');
       syncUser()
         .then(() => {
+          console.log('Home page - user sync successful');
           setUserSynced(true);
         })
         .catch(error => {
           console.error('Failed to sync user on home page:', error);
+          // Don't block the user experience if sync fails
+          setUserSynced(true); // Mark as synced to prevent retry loops
         });
     }
   }, [isSignedIn, isLoaded, userSynced]);

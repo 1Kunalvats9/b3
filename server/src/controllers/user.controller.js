@@ -22,40 +22,76 @@ export const updateProfile = asyncHandler(async (req,res)=>{
 
 
 export const syncUser = asyncHandler(async (req, res) => {
-  const { userId } = getAuth(req);
+  try {
+    const { userId } = getAuth(req);
+    
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized - no user ID found" });
+    }
   
-  console.log('Syncing user with ID:', userId);
+    console.log('Syncing user with ID:', userId);
 
-  // check if user already exists in mongodb
-  const existingUser = await User.findOne({ clerkId: userId });
-  if (existingUser) {
-    console.log('User already exists:', existingUser.email);
-    return res.status(200).json({ user: existingUser, message: "User already exists" });
+    // check if user already exists in mongodb
+    const existingUser = await User.findOne({ clerkId: userId });
+    if (existingUser) {
+      console.log('User already exists:', existingUser.email);
+      return res.status(200).json({ user: existingUser, message: "User already exists" });
+    }
+
+    // create new user from Clerk data
+    const clerkUser = await clerkClient.users.getUser(userId);
+    
+    if (!clerkUser || !clerkUser.emailAddresses || clerkUser.emailAddresses.length === 0) {
+      return res.status(400).json({ error: "Invalid user data from Clerk" });
+    }
+    
+    console.log('Clerk user data:', clerkUser.emailAddresses[0].emailAddress);
+
+    const userData = {
+      clerkId: userId,
+      email: clerkUser.emailAddresses[0].emailAddress,
+      profilePicture: clerkUser.imageUrl || "",
+    };
+
+    const user = await User.create(userData);
+    console.log('New user created:', user.email);
+
+    res.status(201).json({ user, message: "User created successfully" });
+  } catch (error) {
+    console.error('Error in syncUser:', error);
+    res.status(500).json({ 
+      error: "Failed to sync user", 
+      details: error.message 
+    });
   }
-
-  // create new user from Clerk data
-  const clerkUser = await clerkClient.users.getUser(userId);
-  console.log('Clerk user data:', clerkUser.emailAddresses[0].emailAddress);
-
-  const userData = {
-    clerkId: userId,
-    email: clerkUser.emailAddresses[0].emailAddress,
-    profilePicture: clerkUser.imageUrl || "",
-  };
-
-  const user = await User.create(userData);
-  console.log('New user created:', user.email);
-
-  res.status(201).json({ user, message: "User created successfully" });
 });
 
 export const getCurrentUser = asyncHandler(async (req, res) => {
-  const { userId } = getAuth(req);
-  const user = await User.findOne({ clerkId: userId });
+  try {
+    const { userId } = getAuth(req);
+    
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized - no user ID found" });
+    }
+    
+    console.log('Getting current user for ID:', userId);
+    
+    const user = await User.findOne({ clerkId: userId });
 
-  if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) {
+      console.log('User not found for ID:', userId);
+      return res.status(404).json({ error: "User not found" });
+    }
 
-  res.status(200).json({ user });
+    console.log('User found:', user.email);
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error('Error in getCurrentUser:', error);
+    res.status(500).json({ 
+      error: "Failed to get user data", 
+      details: error.message 
+    });
+  }
 });
 
 
