@@ -68,10 +68,10 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
           style={{
             transform: [{ scale: scaleAnim }],
           }}
-          className="bg-white rounded-2xl p-6 w-full max-w-sm"
+          className="bg-white rounded-2xl p-8 w-full max-w-sm mx-4"
         >
           {/* Header */}
-          <View className="items-center mb-4">
+          <View className="items-center mb-6">
             <View className="w-16 h-16 bg-blue-100 rounded-full items-center justify-center mb-3">
               <Feather name="info" size={24} color="#3B82F6" />
             </View>
@@ -86,7 +86,7 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
           </Text>
 
           {/* Buttons */}
-          <View className="space-y-3">
+          <View className="space-y-4">
             {buttons.map((button, index) => (
               <TouchableOpacity
                 key={index}
@@ -94,7 +94,7 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
                   button.onPress();
                   onClose();
                 }}
-                className={`py-3 px-4 rounded-xl ${getButtonStyle(button.style)}`}
+                className={`py-4 px-6 rounded-xl ${getButtonStyle(button.style)}`}
               >
                 <Text className={`text-center font-semibold ${getButtonTextStyle(button.style)}`}>
                   {button.text}

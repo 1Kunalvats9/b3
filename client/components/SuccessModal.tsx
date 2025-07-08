@@ -143,7 +143,8 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
           style={{
             backgroundColor: 'white',
             borderRadius: 20,
-            padding: 40,
+            padding: 32,
+            margin: 16,
             alignItems: 'center',
             transform: [{ scale: scaleAnim }],
             shadowColor: '#000',
@@ -181,11 +182,11 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
             Order Placed Successfully! 🎉
           </Text>
           
-          <Text className="text-base text-gray-600 mb-4 text-center">
+          <Text className="text-base text-gray-600 mb-6 text-center">
             Your order has been confirmed
           </Text>
           
-          <View className="bg-gray-50 rounded-lg px-4 py-3 mb-4">
+          <View className="bg-gray-50 rounded-xl px-6 py-4 mb-6">
             <Text className="text-sm text-gray-500 text-center">Order Number</Text>
             <Text className="text-lg font-bold text-purple-600 text-center">
               #{orderNumber}
@@ -194,7 +195,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
           
           {/* Coins Earned */}
           {coinsEarned > 0 && (
-            <View className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 mb-4">
+            <View className="bg-yellow-50 border border-yellow-200 rounded-xl px-6 py-4 mb-6">
               <View className="flex-row items-center justify-center">
                 <Feather name="star" size={20} color="#F59E0B" />
                 <Text className="ml-2 text-yellow-700 font-semibold">
@@ -207,7 +208,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
             </View>
           )}
           
-          <Text className="text-sm text-gray-500 text-center">
+          <Text className="text-sm text-gray-500 text-center px-4">
             You will receive a confirmation shortly
           </Text>
         </Animated.View>

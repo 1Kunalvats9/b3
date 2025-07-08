@@ -119,13 +119,11 @@ const AdminPanel = () => {
   };
 
   const renderProduct = ({ item }: { item: Product }) => (
-    <View style={{ width: '48%', marginBottom: 16 }}>
-      <ProductCard 
-        product={item} 
-        isAdmin={true}
-        onEdit={handleEditProduct}
-      />
-    </View>
+    <ProductCard 
+      product={item} 
+      isAdmin={true}
+      onEdit={handleEditProduct}
+    />
   );
 
   const renderOrder = ({ item }: { item: Order }) => (
@@ -159,7 +157,10 @@ const AdminPanel = () => {
               paddingVertical: 12,
               paddingBottom: 100 
             }}
-            columnWrapperStyle={{ justifyContent: 'space-between' }}
+            columnWrapperStyle={{ 
+              justifyContent: 'space-between',
+              marginBottom: 8
+            }}
             ListEmptyComponent={
               <View className="flex-1 items-center justify-center py-20">
                 <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-4">

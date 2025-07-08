@@ -30,7 +30,7 @@ const SortModal: React.FC<SortModalProps> = ({
       onRequestClose={onClose}
     >
       <View className="flex-1 justify-end bg-black/50">
-        <View className="bg-white rounded-t-3xl p-6">
+        <View className="bg-white rounded-t-3xl p-8 mx-2 mb-2 rounded-b-2xl">
           <View className="flex-row items-center justify-between mb-6">
             <Text className="text-xl font-bold text-gray-800">Sort By</Text>
             <TouchableOpacity onPress={onClose} className="p-1">
@@ -44,7 +44,7 @@ const SortModal: React.FC<SortModalProps> = ({
                 onSortSelect(option.key);
                 onClose();
               }}
-              className={`flex-row items-center justify-between py-4 px-3 rounded-lg mb-2 ${
+              className={`flex-row items-center justify-between py-4 px-4 mx-2 rounded-xl mb-3 ${
                 currentSort === option.key ? 'bg-purple-50' : ''
               }`}
             >
