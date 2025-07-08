@@ -204,11 +204,11 @@ const Home = () => {
         contentContainerStyle={{
           paddingHorizontal: 16,
           paddingVertical: 12,
-          paddingBottom: 100,
+          paddingBottom: 100
         }}
         columnWrapperStyle={{
           justifyContent: 'space-between',
-          marginBottom: 8
+          paddingHorizontal: 8
         }}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />

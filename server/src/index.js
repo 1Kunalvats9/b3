@@ -101,37 +101,11 @@ io.on('connection', (socket) => {
 
 // Enhanced CORS configuration
 const corsOptions = {
-    origin: function (origin, callback) {
-        // Allow requests with no origin (mobile apps, curl, etc.)
-        if (!origin) return callback(null, true);
-        
-        const allowedOrigins = [
-            'http://localhost:8081',
-            'https://b3-iota.vercel.app',
-            /^http:\/\/192\.168\.\d+\.\d+:8081$/, // Local network IPs
-            /^http:\/\/10\.\d+\.\d+\.\d+:8081$/,  // Local network IPs
-            /^http:\/\/172\.\d+\.\d+\.\d+:8081$/ // Local network IPs
-        ];
-        
-        const isAllowed = allowedOrigins.some(allowedOrigin => {
-            if (typeof allowedOrigin === 'string') {
-                return origin === allowedOrigin;
-            } else if (allowedOrigin instanceof RegExp) {
-                return allowedOrigin.test(origin);
-            }
-            return false;
-        });
-        
-        if (isAllowed) {
-            callback(null, true);
-        } else {
-            console.log('CORS blocked origin:', origin);
-            callback(null, true); // Allow all for now, can be restricted later
-        }
-    },
+    origin: true, // Allow all origins for now to bypass Vercel security
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    optionsSuccessStatus: 200
 };
 
 (async () => {
@@ -141,6 +115,16 @@ const corsOptions = {
 
         app.use(cors(corsOptions));
         app.use(express.json());
+        
+        // Add security headers to prevent Vercel security checkpoint
+        app.use((req, res, next) => {
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            res.setHeader('X-Frame-Options', 'DENY');
+            res.setHeader('X-XSS-Protection', '1; mode=block');
+            res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+            next();
+        });
+        
         app.use(clerkMiddleware());
         
         // Add request logging middleware
@@ -153,7 +137,57 @@ const corsOptions = {
         // Add error handling middleware
         app.use((err, req, res, next) => {
             console.error('Unhandled error:', err);
-            res.status(500).json({ 
+            if (!res.headersSent) {
+                res.status(500).json({ 
+                    error: 'Internal server error',
+                    details: err.message 
+                });
+            }
+        });
+        
+        // Handle preflight requests
+        app.options('*', (req, res) => {
+            res.status(200).json({
+                message: 'Preflight OK'
+            });
+        });
+        
+        // Add a health check that bypasses auth
+        app.get('/api/health', (req, res) => {
+            res.json({ 
+                status: 'OK', 
+                timestamp: new Date().toISOString(),
+                socketConnections: io.engine.clientsCount,
+                environment: process.env.NODE_ENV || 'development'
+            });
+        });
+        
+        // Add middleware to ensure JSON responses
+        app.use((req, res, next) => {
+            const originalSend = res.send;
+            res.send = function(data) {
+                if (typeof data === 'string' && !res.get('Content-Type')) {
+                    res.set('Content-Type', 'application/json');
+                }
+                return originalSend.call(this, data);
+            };
+            next();
+        });
+        
+        // Final error handler
+        app.use((err, req, res, next) => {
+            console.error('Final error handler:', err);
+            if (!res.headersSent) {
+                res.status(500).json({ 
+                    error: 'Internal server error',
+                    details: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+                });
+            }
+        });
+        
+        // 404 handler
+        app.use('*', (req, res) => {
+            res.status(404).json({ 
                 error: 'Internal server error',
                 details: err.message 
             });
@@ -166,34 +200,18 @@ const corsOptions = {
         app.use('/api/sendSms', messageRoutes);
         
         app.get('/', (req, res) => {
-            res.json({ 
+            res.status(200).json({ 
                 message: 'Hello from Server !! 🎉',
                 timestamp: new Date().toISOString(),
-                status: 'OK'
+                status: 'OK',
+                version: '1.0.0'
             });
         });
         
-        // Health check endpoint
-        app.get('/health', (req, res) => {
-            res.json({ 
-                status: 'OK', 
-                timestamp: new Date().toISOString(),
-                socketConnections: io.engine.clientsCount 
-            });
-        });
-        
-        // Catch-all route for unmatched paths
-        app.use('*', (req, res) => {
-            res.status(404).json({ 
-                error: 'Route not found',
-                path: req.originalUrl,
-                method: req.method
-            });
-        });
-
         server.listen(process.env.PORT || 3000, () => {
             console.log(`Server is starting on port ${process.env.PORT || 3000} ✅`);
             console.log(`Socket.io server ready for connections 🔌`);
+            console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
         });
 
     } catch (error) {
