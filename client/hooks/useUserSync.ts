@@ -20,11 +20,16 @@ export const useUserSync = () => {
       console.log('Syncing user with token:', token ? 'Token available' : 'No token');
       console.log('API URL:', `${API_BASE_URL}/api/users/sync`);
 
+      // Add a small delay to ensure server is ready
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       const response = await fetch(`${API_BASE_URL}/api/users/sync`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache',
         },
       });
 
